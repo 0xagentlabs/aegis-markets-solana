@@ -5,4 +5,4 @@
 /program/keys/*.json
 .env*
 !.env.example
-
+*.tsbuildinfo
