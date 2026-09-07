@@ -1,0 +1,8 @@
+/target/
+/app/node_modules/
+/app/.next/
+/app/.vercel/
+/program/keys/*.json
+.env*
+!.env.example
+

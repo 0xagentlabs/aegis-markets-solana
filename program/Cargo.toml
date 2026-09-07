@@ -1,0 +1,15 @@
+[package]
+name = "aave-v3-solana"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+pinocchio = "0.9"
+pinocchio-system = "0.3"
+pinocchio-token = "0.4"
+pinocchio-pubkey = "0.3"
+
+[dev-dependencies]
