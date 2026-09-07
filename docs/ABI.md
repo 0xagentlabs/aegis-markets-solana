@@ -24,6 +24,8 @@ All integers are unsigned little-endian. Public keys and Pyth feed IDs are 32 ra
 | 7 | Repay | amount u64 | same as Deposit |
 | 8 | Liquidate | reserved; currently rejected | — |
 | 9 | SetPause | paused u8 | admin signer; config; reserve writable |
+| 10 | ProposeAdmin | pending admin pubkey | current admin signer; config writable |
+| 11 | AcceptAdmin | none | pending admin signer; config writable |
 
 ## Oracle contract
 

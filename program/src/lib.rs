@@ -17,7 +17,6 @@ entrypoint!(process_instruction);
 pinocchio::nostd_panic_handler!();
 
 pub const ID: Pubkey = pinocchio_pubkey::pubkey!("4cJDBQmPnuf3GZrP9SW17wDhPpBVcvfNk51MiMrUCCfQ");
-pub const ADMIN: Pubkey = pinocchio_pubkey::pubkey!("Dy6mBH4YeqJCRZohd39iSFaf4jyLaxPeBakbZwt1jToL");
 pub const PYTH_RECEIVER: Pubkey =
     pinocchio_pubkey::pubkey!("rec5EKMGg6MxZYaMdyBfgwp4d5rB9T1VQH5pJv5LtFJ");
 pub const TOKEN_PROGRAM: Pubkey =
@@ -101,6 +100,8 @@ pub fn process_instruction(
         7 => repay(accounts, data),
         8 => liquidate(accounts, data),
         9 => set_pause(accounts, data),
+        10 => propose_admin(accounts, data),
+        11 => accept_admin(accounts),
         _ => Err(err(Error::InvalidInstruction)),
     }
 }
@@ -135,10 +136,7 @@ fn create_pda<'a>(
 
 fn initialize_config(a: &[AccountInfo]) -> ProgramResult {
     require(a.len() == 2, Error::InvalidAccounts)?;
-    require(
-        a[0].is_signer() && a[0].key() == &ADMIN,
-        Error::Unauthorized,
-    )?;
+    require(a[0].is_signer(), Error::MissingSignature)?;
     let (pda, bump) = find_program_address(&[b"config"], &ID);
     require(a[1].key() == &pda, Error::InvalidPda)?;
     create_pda(&a[0], &a[1], &[Seed::from(b"config")], bump, CONFIG_LEN)?;
@@ -146,7 +144,7 @@ fn initialize_config(a: &[AccountInfo]) -> ProgramResult {
     d[0] = 1;
     d[1] = bump;
     d[2] = 0;
-    d[8..40].copy_from_slice(&ADMIN);
+    d[8..40].copy_from_slice(a[0].key());
     Ok(())
 }
 
@@ -457,6 +455,33 @@ fn set_pause(a: &[AccountInfo], ix: &[u8]) -> ProgramResult {
     )?;
     let mut d = a[2].try_borrow_mut_data()?;
     d[3] = u8::from(ix[1] != 0);
+    Ok(())
+}
+
+// data: tag | pending_admin pubkey
+fn propose_admin(a: &[AccountInfo], ix: &[u8]) -> ProgramResult {
+    require(a.len() == 2 && ix.len() == 33, Error::InvalidAccounts)?;
+    assert_admin(&a[0], &a[1])?;
+    let pending: Pubkey = ix[1..33].try_into().unwrap();
+    require(
+        pending != [0; 32] && pending != key_at(&a[1].try_borrow_data()?, 8),
+        Error::InvalidAmount,
+    )?;
+    let mut d = a[1].try_borrow_mut_data()?;
+    d[40..72].copy_from_slice(&pending);
+    Ok(())
+}
+
+fn accept_admin(a: &[AccountInfo]) -> ProgramResult {
+    require(a.len() == 2 && a[0].is_signer(), Error::InvalidAccounts)?;
+    require(
+        a[1].owner() == &ID && a[1].data_len() == CONFIG_LEN,
+        Error::InvalidOwner,
+    )?;
+    let mut d = a[1].try_borrow_mut_data()?;
+    require(a[0].key() == &key_at(&d, 40), Error::Unauthorized)?;
+    d[8..40].copy_from_slice(a[0].key());
+    d[40..72].fill(0);
     Ok(())
 }
 
